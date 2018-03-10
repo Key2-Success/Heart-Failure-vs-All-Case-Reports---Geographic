@@ -12,6 +12,9 @@ The R script includes a few stepes:
 
 The image enclosed is on a scale from blue to red and only includes those countries that are significant in the above comparison; the more blue the country is, the more significant the country is in producing heart failure case reports. The more red it is, the more significant the country is to not produce heart failure case reports, as compared to its expected case report publishing from all case reports (1.4 million case reports).
 
+## Findings
+It's extremely interesting to note that those countries that significantly produce heart failure case reports are clustered together (South America and Europe). It's also intriguing to see that those countries that significantly don't produce heart failure case reports are also somewhat clustered (Asia). India and China are very populous countries, so it begs the question of whether doctors there see too many heart failure patients to write up case reports on them? More analyses will be needed.
+
 ## Future Steps
 - Will be adding in the US states to see if there are drastic differences or an overall same scale.
 - Will compare all case reports to cancer to see if more populous countries (India, China) will publish significantly.
