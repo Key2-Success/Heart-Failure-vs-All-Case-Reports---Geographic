@@ -14,25 +14,16 @@ library(xlsx)
 library(stringr)
 library(stringi)
 library(readr)
-library(leaflet)
-library(ggmap)
-library(rgdal)
-library(ggplot2)
-library(maps)
-library(RColorBrewer)
-library(plotly)
-library(grDevices)
 
 
 ##### 1: read in the data and clean it #####
 
 # load heart failure case reports
-load("all heart failure case reports clean.Rdata")
+load(file = "Kitu/College/Senior Year/Extracurriculars/Data Science Research Internship/David's Data/HFpEF vs HFrEF/all heart failure case reports clean.Rdata")
 
-location <- read_csv("location.csv")
+location <- read_csv(file = "Kitu/College/Senior Year/Extracurriculars/Data Science Research Internship/Python Extract/location.csv")
 
 location <- location[ , c(3, 2)]
-location$col <- str_replace_all(location$col,"[^[:graph:]]", " ")
 
 ##### 2: extract geographic locations #####
 
@@ -86,7 +77,7 @@ major_global_cities <- rbind(major_global_cities, parenthesis)
 country_capitals <- country_capitals[, 1:2]
 
 # start to string match location by making all strings lowercase to be consistent
-location$col <- tolower(location$col)
+data$AD <- tolower(data$AD)
 countries$Name <- tolower(countries$Name)
 countries$Code <- tolower(countries$Code)
 usstates$V1 <- tolower(usstates$V1)
@@ -100,202 +91,63 @@ state_abs$Abbreviation <- tolower(state_abs$Abbreviation)
 
 
 # ----- string matching ----- #
-save(location, file = "location.Rdata")
-load("location.Rdata")
 
-location$country <- ""
-location$us_state <- ""
+data <- test
+data$country <- ""
+data$us_state <- ""
 
 # string match the countries
-location$country <- str_extract(location$col, paste0("\\b", countries$Name, "\\b", collapse = "|"))
+data$country <- str_extract(data$AD, paste0("\\b", countries$Name, "\\b", collapse = "|"))
 
 # string match the US states
-location$us_state <- str_extract(location$col, paste0("\\b", usstates$V1, "\\b", collapse = "|"))
+data$us_state <- str_extract(data$AD, paste0("\\b", usstates$V1, "\\b", collapse = "|"))
 
 # string match the top US cities
-location$us_cities <- ifelse(is.na(location$us_state) , str_extract(location$col, paste0("\\b", US_cities$City, "\\b", collapse = "|")), "")
-location <- left_join(location, US_cities, by = c("us_cities" = "City"))
-location$us_state <- ifelse(is.na(location$us_state), location$State, location$us_state)
-location$State <- NULL
+data$us_cities <- ifelse(is.na(data$us_state) , str_extract(data$AD, paste0("\\b", US_cities$City, "\\b", collapse = "|")), "")
+data <- left_join(data, US_cities, by = c("us_cities" = "City"))
+data$us_state <- ifelse(is.na(data$us_state), data$State, data$us_state)
+data$State <- NULL
 
 # string match country capitals
-location$capitals <- ifelse(is.na(location$country) , str_extract(location$col, paste0("\\b", country_capitals$CapitalName, "\\b", collapse = "|")), "")
-location <- left_join(location, country_capitals, by = c("capitals" = "CapitalName"))
-location$country <- ifelse(is.na(location$country), location$CountryName, location$country)
+data$capitals <- ifelse(is.na(data$country) , str_extract(data$AD, paste0("\\b", country_capitals$CapitalName, "\\b", collapse = "|")), "")
+data <- left_join(data, country_capitals, by = c("capitals" = "CapitalName"))
+data$country <- ifelse(is.na(data$country), data$CountryName, data$country)
 
 # string match the major global cities
-location$world_cities <- ifelse(is.na(location$country) , str_extract(location$col, paste0("\\b", major_global_cities$City, "\\b", collapse = "|")), "")
-location <- left_join(location, major_global_cities, by = c("world_cities" = "City"))
-location$country <- ifelse(is.na(location$country), location$Country, location$country)
+data$world_cities <- ifelse(is.na(data$country) , str_extract(data$AD, paste0("\\b", major_global_cities$City, "\\b", collapse = "|")), "")
+data <- left_join(data, major_global_cities, by = c("world_cities" = "City"))
+data$country <- ifelse(is.na(data$country), data$Country, data$country)
 
 # string match usa state abbreviations
-cond <- is.na(location$us_state) & (is.na(location$country) | location$country == "United States")
-location$abs <- location$us_state
-location$abs[cond] <- str_extract(location$col[cond], paste0("\\b", state_abs$Abbreviation, "\\b", collapse = "|"))
-location <- left_join(location, state_abs, by = c("abs" = "Abbreviation"))
-location$us_state <- ifelse(is.na(location$us_state), location$State, location$us_state)
+cond <- is.na(data$us_state) & (is.na(data$country) | data$country == "United States")
+data$abs <- data$us_state
+data$abs[cond] <- str_extract(data$AD[cond], paste0("\\b", state_abs$Abbreviation, "\\b", collapse = "|"))
+data <- left_join(data, state_abs, by = c("abs" = "Abbreviation"))
+data$us_state <- ifelse(is.na(data$us_state), data$State, data$us_state)
 
 # hardcode uk and usa abbreviations as well as mapping peking to China and others
-location$country <- ifelse(str_detect(string = location$col, pattern = "\\buk\\b"), "United Kingdom", location$country)
-location$country <- ifelse(grepl("\\busa\\b", location$col), "United States", location$country)
-location$country <- ifelse(grepl("peking", location$col), "China", location$country)
-location$us_state <- ifelse(grepl("stanford", location$col), "california", location$us_state)
-location$us_state <- ifelse(grepl("palo alto", location$col), "california", location$us_state)
-location$country <- ifelse(grepl("england", location$col), "United Kingdom", location$country)
+data$country <- ifelse(str_detect(string = data$AD, pattern = "\\buk\\b"), "United Kingdom", data$country)
+data$country <- ifelse(grepl("\\busa\\b", data$AD), "United States", data$country)
+data$country <- ifelse(grepl("peking", data$AD), "China", data$country)
+data$us_state <- ifelse(grepl("stanford", data$AD), "california", data$us_state)
+data$us_state <- ifelse(grepl("palo alto", data$AD), "california", data$us_state)
+data$country <- ifelse(grepl("england", data$AD), "United Kingdom", data$country)
 
 # vector of all US states
 states <- usstates$V1[1:50]
 
 # if state is in the USA, change country name to USA
-location$country <- ifelse(location$us_state %in% states, "United States", location$country)
+data$country <- ifelse(data$us_state %in% states, "United States", data$country)
 
 # make all countries and states title case
-location$country <- str_to_title(location$country)
-location$us_state <- str_to_title(location$us_state)
+data$country <- str_to_title(data$country)
+data$us_state <- str_to_title(data$us_state)
 
 # remove all unnecessary variables
-location <- location[ , -which(names(location) %in% c("us_cities", "State", "capitals", "CountryName", "world_cities", "Country", "abs"))]
+data <- data[ , -which(names(data) %in% c("us_cities", "State", "capitals", "CountryName", "world_cities", "Country", "abs"))]
 
 
 ##### 3: compare proportions of locations using statistical test #####
 
-# create dataframe for country and state proportions
-loc_country <- data.frame(table(location$country))
-names(loc_country) <- c("loc_country", "loc_country_freq")
-
-data_country <- data.frame(table(data$country))
-names(data_country) <- c("data_country", "data_country_freq")
-
-# join dataframes
-all <- left_join(loc_country, data_country, by = c("loc_country" = "data_country"))
-
-# create proportion variables
-all$loc_prop <- all$loc_country_freq/sum(all$loc_country_freq) # sum is 1442889
-all$data_prop <- all$data_country_freq/sum(all$data_country_freq, na.rm = T) # sum is 18047
-
-# value of proportion is 0 if NA
-all$data_prop <- ifelse(is.na(all$data_prop), 0, all$data_prop)
-all$data_country_freq <- ifelse(is.na(all$data_country_freq), 0, all$data_country_freq)
-
-# find and remove those countries that don't satisfy chi square conditions
-count <- numeric(221) # dim of loc_country
-
-for (i in 1:nrow(all))
-{
-  a <- c(all$loc_country_freq[i], all$data_country_freq[i])
-  b <- c(sum(all$loc_country_freq), sum(all$data_country_freq, na.rm = T)) # dim of each variables
-  m <- matrix(c(a, b-a), ncol = 2)
-  if (sum(chisq.test(m)$expected > 5) != 4)
-  {
-    count <- append(count, i)
-  }
-}
-
-all <- all[-count, ]
-
-# find p-values
-for (i in 1:nrow(all))
-{
-  # calculate raw occurrences
-  prop_1 <- all[i, 2]
-  prop_2 <- all[i, 3]
-  
-  # calculate p-value
-  p <- prop.test(x = c(prop_1, prop_2), n = c(1442889, 18047), correct = TRUE)
-  p <- p$p.value
-  all$pvalue[i] <- p
-}
-
-# order by significant and increasing p-values
-all <- all[all$pvalue <= 0.05, ]
-all <- all[order(all$pvalue), ]
-
-# find difference between proportions
-all$diffs <- all$loc_prop - all$data_prop
-
-# create factor differences
-for (i in 1:nrow(all))
-{
-  if (all$diffs[i] < 0)
-  {
-    all$factor[i] <- -all$data_prop[i]/all$loc_prop[i]
-  }
-  if (all$diffs[i] > 0)
-  {
-    all$factor[i] <- all$loc_prop[i]/all$data_prop[i]
-  }
-}
-
-# substitute infinite values
-for (i in 1:nrow(all))
-{
-  if (all$factor[i] == Inf)
-  {
-    all$factor[i] <- all$loc_prop[i]
-  }
-  if (all$factor[i] == -Inf)
-  {
-    all$factor[i] <- all$data_prop[i]
-  }
-}
-
-save(all, file = "all.Rdata")
-
 ##### 4: graph significant locations #####
-# world and state map data
-world <- map_data(map = "world")
-state <- map_data(map = "state")
 
-# add alaska and hawaii
-alaska <- world[which(world$subregion == "Alaska"), ]
-alaska[ , 6] <- NA
-alaska$region <- "alaska"
-state <- rbind(alaska, state)
-alaska$group <- 100
-
-hawaii <- world[which(world$subregion == "Hawaii"), ]
-hawaii[ , 6] <- NA
-hawaii$region <- "hawaii"
-hawaii$group <- 99
-
-state <- rbind(hawaii, state)
-restWorld <- world[which(world$region != "USA"),]
-
-# save state and world dataframes
-save(state, file = "state.Rdata")
-save(world, file = "world.Rdata")
-
-# # merge state with US data
-# US_count$Var1 <- tolower(US_count$Var1) # lowercase just like in the state df
-# names(US_count)[1] <- "region" # rename just like in the state df
-# state <- left_join(state, US_count)
-
-# merge world with countries data
-world_factor <- all[ , c("loc_country", "factor")]
-names(world_factor) <- c("region", "factor") # rename just like in world df
-world <- left_join(world, world_factor)
-
-# # clean up
-# names(state)[5] <- "Region"
-# names(state)[7] <- "Frequency"
-# names(world)[5] <- "Region"
-# names(world)[7] <- "Frequency"
-# state$Region <- str_to_title(state$Region)
-
-# make map of world
-p1 <- ggplot(data = world, aes(x = long, y = lat, fill = factor, Region = region, frequency = factor, group = group)) + geom_polygon(color = "white", show.legend = FALSE)
-
-# combine map of world with US states map
-p2 <- p1  + guides(fill = guide_legend()) + 
-  ggtitle(label = "Significant Countries between All Case Reports and Heart Failure Case Reports") + theme(plot.title = element_text(hjust = 0.5)) +
-  labs(x = "", y = "") +
-  scale_fill_gradient(low = "blue", high = "red", 
-                      breaks = c(-1, 0, 1), labels = c("cardiovascular", "0", "all"), na.value = "grey")
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-        panel.background = element_rect(fill = "white", colour = "white"), 
-        axis.line = element_line(colour = "white"),
-        axis.ticks=element_blank(), axis.text.x=element_blank(),
-        axis.text.y=element_blank())
-
-# plot it!
-ggplotly(p2, tooltip = c("Region", "frequency"))
